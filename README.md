@@ -33,8 +33,17 @@ npm test
 ```
 Service listens on `http://localhost:3000`
 
+
 ## API
-### POST /api/calculate-mi
+
+| Method | Endpoint            | Description                          |
+| ------ | ------------------- | ------------------------------------ |
+| POST   | `/api/calculate-mi` | Calculate mortgage insurance premium |
+| GET    | `/health`           | Health check                         |
+| GET    | `/docs`             | Swagger UI documentation             |
+
+
+### POST /api/calculate-mi (example)
 Body:
 ```json
 {
@@ -51,11 +60,11 @@ Success `200`:
 {
   "success": true,
   "data": {
-    "monthlyPremium": 1190,
-    "annualPremium": 14280,
-    "premiumRate": 0.42,
-    "ltv": 85,
-    "provider": "MGIC",
+    "monthlyPremium": 1895.83,
+    "annualPremium": 22750,
+    "premiumRate": 0.65,
+    "ltv": 87.5,
+    "provider": "Radian",
     "eligible": true,
     "metadata": { "calculatedAt": "...", "rateVersion": "2024-Q4" }
   }
@@ -76,4 +85,4 @@ Errors:
 - No extrapolation beyond provided LTV ranges.
 
 ## Time spent
-About 4–6 hours including tests and docs.
+About 5 hours including tests and docs.

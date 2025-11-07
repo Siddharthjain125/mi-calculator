@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { CalculateMiRequest } from '../models/types';
+import { CalculateMiRequest } from '../models/mi.types';
 
 const requestSchema = z.object({
   loanAmount: z.number().gt(0, 'loanAmount must be > 0'),

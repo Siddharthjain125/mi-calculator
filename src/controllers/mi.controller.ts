@@ -20,7 +20,7 @@ export async function calculateMiHandler(req: Request, res: Response) {
   try {
     const result = miService.calculate(value!);
     return res.status(200).json({ success: true, data: result });
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (err instanceof ValidationError) {
       return res.status(err.status).json({ success: false, error: { code: err.code, message: err.message, details: err.details } });
     }

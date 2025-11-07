@@ -1,8 +1,9 @@
 import { injectable, inject } from 'tsyringe';
 import { RateRepository } from '../repositories/rate.repository';
-import { CalculateMiRequest, CalculateMiResponse } from '../models/types';
+import { CalculateMiRequest, CalculateMiResponse } from '../models/mi.types';
 import { BusinessError, ValidationError } from '../errors';
 import dayjs from 'dayjs';
+import { RateSheet } from '../models/rate-sheet.types';
 
 /**
  * IMPORTANT ASSUMPTION (to match sample scenarios):
@@ -14,9 +15,28 @@ import dayjs from 'dayjs';
 export class MiService {
   constructor(@inject(RateRepository) private rateRepo: RateRepository) {}
 
+  /**
+   * Mortgage Insurance calculation logic
+   *
+   * Steps:
+   * 1. Validate inputs (credit score, loan limits, loan amount < property value).
+   * 2. Compute LTV (Loan-to-Value).
+   * 3. If LTV <= threshold → MI is not required → return zero premium.
+   * 4. Determine the base premium rate from:
+   *      - LTV bucket
+   *      - Credit score bracket (low / medium / high risk)
+   * 5. Apply state + loan purpose + borrower adjustments.
+   * 6. Convert the final rate into an annual percent:
+   *        (rateValue * 0.1) → e.g., 0.42 → 4.2%
+   * 7. Compute annual and monthly premiums and return structured output.
+   */
+
   calculate(request: CalculateMiRequest): CalculateMiResponse {
-    const sheet = this.rateRepo.getRateSheet();
+    const sheet: RateSheet = this.rateRepo.getRateSheet();
     const elig = sheet.eligibility;
+
+    // ---- INPUT VALIDATION ----
+    // Business validation beyond schema validation.
     const errors: { field: string; message: string }[] = [];
 
     if (request.creditScore < elig.minCreditScore) {
@@ -30,21 +50,45 @@ export class MiService {
     }
     if (errors.length) throw new ValidationError('Validation failed', errors);
 
+    // ---- LTV CALCULATION ----
+
     const ltv = Number(((request.loanAmount / request.propertyValue) * 100).toFixed(2));
 
+    // If LTV is below MI requirement threshold → MI is not required.
     if (ltv <= elig.miRequiredThreshold) {
       return {
         monthlyPremium: 0,
         annualPremium: 0,
         premiumRate: 0,
         ltv,
-        provider: this.selectProvider(request.creditScore, sheet.rates.providers),
+        provider: this.selectProvider(request.creditScore, sheet.rates.providers as RateSheet['rates']['providers']),
         eligible: false,
         metadata: { calculatedAt: dayjs().toISOString(), rateVersion: sheet.version }
       };
     }
 
-    const baseRates = sheet.rates.baseRates as Record<string, { low: number; medium: number; high: number }>;
+    // ---- DETERMINE BASE RATE BUCKET ----
+    /**
+     * LTV Bucket Selection
+     *
+     * IMPORTANT NOTE:
+     * The documentation states that **the upper value of an LTV bracket belongs to
+     * the previous bucket**.
+     *
+     * Example:
+     *   85.00% LTV → falls in 80.01–85 bucket
+     *   85.01% LTV → falls in 85.01–90 bucket
+     *
+     * However, the assignment's sample output contradicts this rule:
+     * The provided sample treats 85.00% as if it belongs to the **next** bucket.
+     *
+     * In this implementation we follow the **written documentation**, not the sample,
+     * because written specification takes precedence over provided example output.
+     *
+     * This ensures predictable and auditable behavior based on defined rules.
+     */
+
+    const baseRates: RateSheet['rates']['baseRates'] = sheet.rates.baseRates;
     let base: number | null = null;
     if (ltv > 80 && ltv <= 85) base = this.byScore(baseRates['80.01-85'], request.creditScore);
     else if (ltv > 85 && ltv <= 90) base = this.byScore(baseRates['85.01-90'], request.creditScore);
@@ -52,6 +96,13 @@ export class MiService {
     else if (ltv > 95 && ltv <= 97) base = this.byScore(baseRates['95.01-97'], request.creditScore);
     else throw new BusinessError('Loan does not meet MI eligibility criteria');
 
+    // ---- APPLY ADJUSTMENTS ----
+    /**
+     * Each adjustment is additive:
+     *  + refinance adjustment
+     *  + first-time buyer discount (only for purchase loans)
+     *  + state-specific surcharge
+     */
     let finalValue = base;
 
     if (request.loanPurpose === 'refinance') finalValue += sheet.rates.adjustments.loanPurpose.refinance ?? 0;
@@ -59,6 +110,14 @@ export class MiService {
       finalValue += sheet.rates.adjustments.borrowerType.firstTime ?? 0;
     const stateAdj = sheet.rates.adjustments.states[request.propertyState.toUpperCase()];
     if (stateAdj) finalValue += stateAdj;
+
+    // ---- PREMIUM CALCULATION ----
+    /**
+     * The assignment states that the numeric values in the rate sheet represent
+     * *rate units*, and we convert them to their annual percentage by multiplying by 0.1.
+     *
+     * Example: 0.42 → 4.2% → annual premium = loanAmount * 0.042
+     */
 
     const annualRateDecimal = finalValue * 0.1;
     const annualPremium = Number((request.loanAmount * annualRateDecimal).toFixed(2));
@@ -69,7 +128,7 @@ export class MiService {
       annualPremium,
       premiumRate: Number(finalValue.toFixed(3)),
       ltv,
-      provider: this.selectProvider(request.creditScore, sheet.rates.providers),
+      provider: this.selectProvider(request.creditScore, sheet.rates.providers as RateSheet['rates']['providers']),
       eligible: true,
       metadata: { calculatedAt: dayjs().toISOString(), rateVersion: sheet.version }
     };
@@ -81,7 +140,7 @@ export class MiService {
     return bucket.low;
   }
 
-  private selectProvider(score: number, providers: any): string {
+  private selectProvider(score: number, providers: RateSheet['rates']['providers']): string {
     if (score >= 720) return providers.high;
     if (score >= 680) return providers.medium;
     return providers.low;

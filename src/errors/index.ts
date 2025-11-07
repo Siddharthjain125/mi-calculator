@@ -1,3 +1,3 @@
-export { AppError } from './AppError';
-export { ValidationError } from './ValidationError';
-export { BusinessError } from './BusinessError';
+export { AppError } from './app-error';
+export { ValidationError } from './validation-error';
+export { BusinessError } from './business-error';

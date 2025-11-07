@@ -1,4 +1,4 @@
-import { AppError } from './AppError';
+import { AppError } from './app-error';
 export class ValidationError extends AppError {
   public readonly details: { field: string; message: string }[];
   constructor(message: string, details: { field: string; message: string }[]) {
