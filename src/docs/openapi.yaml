@@ -1,0 +1,59 @@
+openapi: 3.0.1
+info:
+  title: Mortgage Insurance Calculator API
+  version: 1.0.0
+  description: API to calculate monthly and annual mortgage insurance premiums.
+
+paths:
+  /api/calculate-mi:
+    post:
+      summary: Calculate mortgage insurance premium
+      description: Returns MI eligibility and calculated premium details.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - loanAmount
+                - propertyValue
+                - creditScore
+                - propertyState
+                - loanPurpose
+                - borrowerType
+              properties:
+                loanAmount:
+                  type: number
+                  example: 340000
+                propertyValue:
+                  type: number
+                  example: 400000
+                creditScore:
+                  type: number
+                  example: 740
+                propertyState:
+                  type: string
+                  example: TX
+                loanPurpose:
+                  type: string
+                  enum: [purchase, refinance]
+                borrowerType:
+                  type: string
+                  enum: [firstTime, repeat]
+      responses:
+        "200":
+          description: Successful calculation
+        "400":
+          description: Validation errors
+        "422":
+          description: Business eligibility errors
+        "500":
+          description: Internal server error
+
+  /health:
+    get:
+      summary: Health check
+      responses:
+        "200":
+          description: API is running

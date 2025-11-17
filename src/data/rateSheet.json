@@ -1,0 +1,54 @@
+{
+  "version": "2024-Q4",
+  "effectiveDate": "2024-10-01",
+  "expirationDate": "2024-12-31",
+  "rates": {
+    "baseRates": {
+      "80.01-85": {
+        "low": 0.52,
+        "medium": 0.42,
+        "high": 0.32
+      },
+      "85.01-90": {
+        "low": 0.78,
+        "medium": 0.62,
+        "high": 0.47
+      },
+      "90.01-95": {
+        "low": 1.05,
+        "medium": 0.85,
+        "high": 0.65
+      },
+      "95.01-97": {
+        "low": 1.45,
+        "medium": 1.2,
+        "high": 0.95
+      }
+    },
+    "adjustments": {
+      "loanPurpose": {
+        "refinance": 0.1
+      },
+      "borrowerType": {
+        "firstTime": -0.05
+      },
+      "states": {
+        "CA": 0.08,
+        "NY": 0.12,
+        "NJ": 0.12,
+        "HI": 0.12
+      }
+    },
+    "providers": {
+      "high": "MGIC",
+      "medium": "Radian",
+      "low": "Essent"
+    }
+  },
+  "eligibility": {
+    "minCreditScore": 500,
+    "minLoanAmount": 50000,
+    "maxLoanAmount": 5000000,
+    "miRequiredThreshold": 80
+  }
+}
