@@ -66,28 +66,11 @@ export class MiService {
         metadata: { calculatedAt: dayjs().toISOString(), rateVersion: sheet.version }
       };
     }
-
-    // ---- DETERMINE BASE RATE BUCKET ----
+    // ---- BASE RATE DETERMINATION ----
     /**
-     * LTV Bucket Selection
-     *
-     * IMPORTANT NOTE:
-     * The documentation states that **the upper value of an LTV bracket belongs to
-     * the previous bucket**.
-     *
-     * Example:
-     *   85.00% LTV → falls in 80.01–85 bucket
-     *   85.01% LTV → falls in 85.01–90 bucket
-     *
-     * However, the assignment's sample output contradicts this rule:
-     * The provided sample treats 85.00% as if it belongs to the **next** bucket.
-     *
-     * In this implementation we follow the **written documentation**, not the sample,
-     * because written specification takes precedence over provided example output.
-     *
-     * This ensures predictable and auditable behavior based on defined rules.
+     * Determine base rate from LTV bucket and credit score bracket.
+     * Throws if LTV is outside defined buckets.
      */
-
     const baseRates: RateSheet['rates']['baseRates'] = sheet.rates.baseRates;
     let base: number | null = null;
     if (ltv > 80 && ltv <= 85) base = this.byScore(baseRates['80.01-85'], request.creditScore);

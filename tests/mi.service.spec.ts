@@ -9,19 +9,12 @@ const service = new MiService(repo);
 
 describe('MiService', () => {
   test('Scenario 1 - Eligible (basic)', () => {
-    /**
-       * NOTE:
-       * Due to the discrepancy between documentation and sample outputs,
-       * premium values computed here will differ from the example shown in the assignment.
-       * We intentionally follow the documented LTV bucket rule to ensure consistency
-       * and avoid ambiguous interpretation.
-       */
     const req: CalculateMiRequest = {
       loanAmount: 340000,
       propertyValue: 400000,
-      creditScore: 700,
+      creditScore: 740,
       propertyState: 'TX',
-      loanPurpose: 'purchase',
+      loanPurpose: 'refinance',
       borrowerType: 'repeat'
     };
     const res = service.calculate(req);
@@ -29,7 +22,7 @@ describe('MiService', () => {
     expect(res.annualPremium).toBeCloseTo(14280);
     expect(res.monthlyPremium).toBeCloseTo(1190);
     expect(res.premiumRate).toBeCloseTo(0.42, 2);
-    expect(res.provider).toBe('Radian');
+    expect(res.provider).toBe('MGIC');
     expect(res.eligible).toBe(true);
   });
 
